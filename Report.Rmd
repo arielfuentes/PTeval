@@ -116,7 +116,7 @@ SELECT SUM(CAST([f_exp_servicioperiodots] AS FLOAT)) AS DDA,
 }
 </style>
 
-````{r, message=FALSE, echo=FALSE, fig.align='center'}
+````{r, message=FALSE, warning = F, echo=FALSE, fig.align='center'}
 #route
 ruta <- filter(.data = rts, ROUTE_NAME == x)
 geocoor <- st_transform(ruta, 4326) %>%
@@ -164,16 +164,7 @@ map <- tm_basemap(leaflet::providers$OpenStreetMap) +
   tm_shape(ruta) +
   tm_lines(col = "#FF0000", lwd = 2) +
   tm_shape(top_odline, name = "dl principal") +
-  tm_lines(col = "#0000FF", lwd = 2) #+
-  # tm_shape(stops_sersen) +
-  # tm_symbols(shape=marker_icon(), 
-  #            size=1,
-  #            legend.size.show = FALSE, 
-  #            scale=1, 
-  #            border.col = NULL, 
-  #            id="Orden", 
-  #            popup.vars = TRUE, zindex = 600
-  #            )
+  tm_lines(col = "#0000FF", lwd = 2) 
   
 #tmap2leaflet
 lft <- tmap_leaflet(map)
@@ -209,10 +200,10 @@ kable(idx_ser) %>%
 ````
 
 <br></br>
-<center>En el siguiente gráfico se muestran todos los sube-baja del periodo para tener una completa visualización del uso del *servicio-sentido*. </center>
+<center>En los siguientes gráficos se muestran todos los sube-baja del periodo para tener una completa visualización del uso del *servicio-sentido*. </center>
 <br></br>
 
-````{r, message=FALSE, echo=FALSE, fig.align='center'}
+````{r, message=FALSE, warning=F, echo=FALSE, fig.align='center'}
 #stops_dicc
 A4_sersen <- filter(.data = A4, ROUTE_NAME == x) %>%
   rename(`Servicio Sentido` = ROUTE_NAME)
@@ -231,16 +222,43 @@ od_str <- tibble(orden_sub = rep(c(1:max(od_sersen_plt$orden_baj)),
                                  times = max(od_sersen_plt$orden_baj))) %>%
   left_join(od_sersen_plt) %>%
   left_join(select(.data = A42plt, orden_sub = Orden, par_sub = `Código  paradero Usuario`)) %>%
-  left_join(select(.data = A42plt, orden_baj = Orden, par_baj = `Código  paradero Usuario`)) %>%
-  # replace(is.na(.), 0) %>%
+  left_join(select(.data = A42plt, orden_baj = Orden, par_baj = `Código  paradero Usuario`)) 
+  
+#Demand Profile
+od_str_dcS <- select(.data = od_str, Parada = par_sub, Orden = orden_sub, Sube = DDA) %>%
+  replace(is.na(.), 0) %>%
+  group_by(Orden, Parada) %>%
+  summarise(Sube = sum(Sube)) %>%
+  ungroup()
+od_str_dcB <- select(.data = od_str, Parada = par_baj, Orden = orden_baj, Baja = DDA) %>%
+  replace(is.na(.), 0) %>%
+  group_by(Orden, Parada) %>%
+  summarise(Baja = sum(Baja)) %>%
+  ungroup()
+od_str_dc <- full_join(od_str_dcS, od_str_dcB) %>%
+  mutate(Carga = cumsum(Sube - Baja))
+#Heatmap IN-OUT Demand
+od_str_ly <- od_str %>%
   select(par_sub, par_baj, DDA) %>%
   od_to_odmatrix()
-
-plot_ly(z = od_str,
+#Plot Profile
+plot_ly(od_str_dc, width = 1100, height = 500) %>%
+    add_trace(x = ~Orden, y = ~Sube, type = "bar", name = "Subidas (TRX)",
+              marker = list(color = "#3399FF"), hovertemplate = 'Sube: %{y:.2f} TRX') %>%
+    add_trace(x = ~Orden, y = ~Baja, type = "bar", name = "Bajadas (TRX)",
+              marker = list(color = "#FF6633"), hovertemplate = 'Baja: %{y:.2f} TRX') %>%
+    add_trace(x = ~Orden, y = ~Carga, type = "scatter", mode = "lines", name = "Carga (TRX)",
+              line = list(color = '#339900'), hovertemplate = 'Carga: %{y:.2f} TRX') %>%
+    layout(title = ~paste("Diagrama de Carga"),
+           xaxis = list(title = "Paradas", dtick = 1), 
+           yaxis = list(side = "left", title = "Cantidad de Pasajeros (TRX)")
+           )
+#Plot heatmap
+plot_ly(z = od_str_ly,
         type = "heatmap",
         colors = "YlOrRd",
-        x=colnames(od_str),
-        y=rownames(od_str)
+        x=colnames(od_str_ly),
+        y=rownames(od_str_ly)
         ) %>%
   layout(title = "Sube-Baja Servicio",
          xaxis = list(title = "Parada de bajada"),
@@ -249,13 +267,10 @@ plot_ly(z = od_str,
 ````
 
 <br></br>
-La siguiente tabla permite identificar las paradas que componen el sube-baja del servicio.
+<center>La siguiente tabla permite identificar las paradas que componen el sube-baja del servicio.</center>
 <br></br>
 
 ````{r, message=FALSE, echo=FALSE, fig.align='center'}
-# A4_sersen <- filter(.data = A4, ROUTE_NAME == x) %>%
-#   rename(`Servicio Sentido` = ROUTE_NAME)
-
 kable(A4_sersen) %>%
   kable_styling(full_width = F, position = "center") %>%
   scroll_box(height = "400px", width = "800px")
@@ -285,23 +300,34 @@ spp_gf
 
 
 ```{r, message=FALSE, warning = FALSE, echo=FALSE, fig.align='center'}
+#od by bus & period 
 od_xy <- filter(.data = od_sersen, ROUTE_NAME == x & PER_DTPM2 == y)
+# demand by OD only
+od_x <- filter(.data = od_sersen, PER_DTPM2 == y) %>%
+  select(parOD, DDA) %>%
+  group_by(parOD) %>%
+  summarise(DDA = sum(DDA))
 buff_z <- lapply(X = 1:nrow(od_xy),
-       FUN = function(z) st_buffer(x = filter(.data = stp,
-                                              CODINFRA %in% c(od_xy$par_subida[z], od_xy$par_bajada[z])
-                                              ),
+       FUN = function(z) st_buffer(x = dplyr::arrange(left_join(filter(.data = stp,
+                                              CODINFRA %in% c(od_xy$par_subida[z],
+                                                              od_xy$par_bajada[z])), 
+                                              select(.data = A4_sersen,
+                                                     CODINFRA = `Código paradero TS`, 
+                                                     Orden)
+                                              ), Orden),
                                    dist = 300
                                    )
        )
-inter_aa <- lapply(X = buff_z,
-                   FUN = function(aa) select(.data = st_drop_geometry(st_join(x = aa,
-                                                                              y = stp,
-                                                                              join = st_intersects
-                                                                              )
+
+#extract bus & competitors stops
+inter_aa <- lapply(X = buff_z, 
+                   FUN = function(aa) select(.data = st_drop_geometry(st_join(x = aa, y = stp, 
+                                                                           join = st_intersects)
                                                                       ),
-                                             CODINFRA.y
+                                             CODINFRA.x, CODINFRA.y
                                              )
                    )
+#create OD
 inter_ab <- lapply(X = inter_aa,
                    FUN = function(ab) group_split(.tbl = add_column(.data = ab,
                                                                     grupo = str_sub(row.names(ab),
@@ -312,24 +338,96 @@ inter_ab <- lapply(X = inter_aa,
                                                   grupo
                                                   )
                    )
-comb_ac <- unique(unlist(lapply(X = inter_ab,
-                                FUN = function(ab) as.vector(outer(ab[[2]]$CODINFRA.y,
-                                                                   ab[[1]]$CODINFRA.y,
-                                                                   paste,
-                                                                   sep = "|"
-                                                                   )
-                                                             )
-                                )
+
+#list of competitors OD
+comb_ac1 <- unlist(lapply(X = inter_ab, 
+                  FUN = function(ab) as.vector(outer(ab[[1]]$CODINFRA.y, 
+                                                     ab[[2]]$CODINFRA.y, 
+                                                     paste, 
+                                                     sep = "|"
+                                                     )
+                                               )
                          )
                   )
+#list of bus OD                  
+comb_ac2 <- unlist(lapply(X = inter_ab, 
+                                 FUN = function(ab) as.vector(outer(ab[[1]]$CODINFRA.x, 
+                                                                    ab[[2]]$CODINFRA.x, 
+                                                                    paste, 
+                                                                    sep = "|"
+                                                                    )
+                                                              )
+                          )
+                   )
+
+detail_superposraw <- tibble(parOD = comb_ac1, od_act = comb_ac2) %>%
+  left_join(od_x) %>%
+  filter(is.na(DDA) == F)
+#table structure
+detail_superpos_str <- tibble(orden_sub = rep(c(1:max(od_sersen_plt$orden_baj)),
+                                 each = max(od_sersen_plt$orden_baj)),
+                 orden_baj = rep(c(1:max(od_sersen_plt$orden_baj)),
+                                 times = max(od_sersen_plt$orden_baj))) %>%
+  left_join(select(.data = A4_sersen, orden_sub = Orden, par_sub = `Código paradero TS`)) %>%
+  left_join(select(.data = A4_sersen, orden_baj = Orden, par_baj = `Código paradero TS`)) %>%
+  unite("od_act", par_sub, par_baj, sep = "|")
+#matrix
+detail_superpos <- list()
+detail_superpos[[1]] <- group_by(.data = detail_superposraw, od_act) %>%
+  summarise(freq = n()) %>%
+  right_join(detail_superpos_str) %>%
+  separate(col = "od_act", into = c("par_sub", "par_baj"), sep = "[|]") %>%
+  left_join(select(.data = A4_sersen, orden_sub = Orden, par_usussub = `Código  paradero Usuario`)) %>%
+  left_join(select(.data = A4_sersen, orden_baj = Orden, par_usubaj = `Código  paradero Usuario`)) %>%
+  arrange(orden_sub, orden_baj) %>%
+  select(par_usussub, par_usubaj, freq) %>%
+  od_to_odmatrix()
+detail_superpos[[2]] <- group_by(.data = detail_superposraw, od_act) %>%
+  summarise(DDA = sum(DDA)) %>%
+  right_join(detail_superpos_str) %>%
+  separate(col = "od_act", into = c("par_sub", "par_baj"), sep = "[|]") %>%
+  left_join(select(.data = A4_sersen, orden_sub = Orden, par_usussub = `Código  paradero Usuario`)) %>%
+  left_join(select(.data = A4_sersen, orden_baj = Orden, par_usubaj = `Código  paradero Usuario`)) %>%
+  arrange(orden_sub, orden_baj) %>%
+  select(par_usussub, par_usubaj, DDA) %>%
+  od_to_odmatrix()
+
+names(detail_superpos) <- c("freq", "DDA")
+
 od_xy_spp <- nrow(filter(.data = od_sersen,
-                                PER_DTPM2 == y & (parOD %in% comb_ac)
+                                PER_DTPM2 == y & (parOD %in% comb_ac1)
                          )
                   )/nrow(od_xy)
 ```
 
-**`r paste("El índice de superposición para el Servicio Sentido", x, "en el periodo", y, "es:", round(od_xy_spp, 2), sep = " ")`**
+<center><h5><span style="color: #FF0000;">**`r paste("El índice de superposición para el Servicio Sentido", x, "en el periodo", y, "es:", round(od_xy_spp, 2), sep = " ")`**</span></h5></center>
 
+<center>A continuación se ve a nivel de detalle (por OD) la Superposición</center>
+<br></br>
+````{r, message=FALSE, warning=F, echo=FALSE, fig.align='center'}
+#Plot heatmap
+plot_ly(z = detail_superpos[[1]],
+        type = "heatmap",
+        colors = "YlGnBu",
+        x=colnames(detail_superpos[[1]]),
+        y=rownames(detail_superpos[[1]])
+        ) %>%
+  layout(title = "Nivel de Superposición por cantidad de competencia",
+         xaxis = list(title = "Parada de bajada"),
+         yaxis = list(title = "Parada de subida")
+         )
+#Plot heatmap
+plot_ly(z = detail_superpos[[2]],
+        type = "heatmap",
+        colors = "BuPu",
+        x=colnames(detail_superpos[[2]]),
+        y=rownames(detail_superpos[[2]])
+        ) %>%
+  layout(title = "Nivel de Superposición por demanda global",
+         xaxis = list(title = "Parada de bajada"),
+         yaxis = list(title = "Parada de subida")
+         )
+````
 
 #### b) Cobertura
 #### c) Conectividad
