@@ -123,6 +123,7 @@ geocoor <- st_transform(ruta, 4326) %>%
   st_coordinates()
 #stops
 bus_stop <- "http://icons.iconarchive.com/icons/google/noto-emoji-travel-places/128/42561-bus-stop-icon.png"
+subway_stop <- "https://icons.iconarchive.com/icons/ncrow/new-york-subway/128/Subway-Car-icon.png"
 stops_sersen <- filter(.data = A4, ROUTE_NAME == x) %>%
   select(Orden,
          SIMT = `Código  paradero Usuario`) %>%
@@ -152,7 +153,6 @@ o_iso <- st_transform(filter(.data = stp, CODINFRA == top_odline$par_subida), 43
 # map
 map <- tm_basemap(leaflet::providers$OpenStreetMap) +
   tm_basemap(leaflet::providers$Stamen.Toner) +
-  tm_basemap(leaflet::providers$Thunderforest.TransportDark) +
   tm_shape(o_iso) +
   tm_polygons("time", 
               palette = c("#FFD700", "#ADFF2F"), 
@@ -164,7 +164,11 @@ map <- tm_basemap(leaflet::providers$OpenStreetMap) +
   tm_shape(ruta) +
   tm_lines(col = "#FF0000", lwd = 2) +
   tm_shape(top_odline, name = "dl principal") +
-  tm_lines(col = "#0000FF", lwd = 2) 
+  tm_lines(col = "#0000FF", lwd = 2) +
+  tm_shape(metro_lst$red_metro, name = "Red de Metro") +
+  tm_lines(col = "#FFD700", lwd = 2) +
+  tm_shape(metro_lst$ext_Metro, name = "Extensión de Metro") +
+  tm_lines(col = "#808000", lwd = 2)
   
 #tmap2leaflet
 lft <- tmap_leaflet(map)
@@ -174,7 +178,21 @@ lft %>%
 	           popup = ~SIMT,
 	           label = ~Orden,
 	           icon = list(iconUrl = bus_stop,
-	                       iconSize = c(50, 50)
+	                       iconSize = c(30, 30)
+	                       )
+	           ) %>%
+  addMarkers(data = metro_lst$est_Metro,
+	           popup = ~layer,
+	           label = ~layer,
+	           icon = list(iconUrl = subway_stop,
+	                       iconSize = c(20, 20)
+	                       )
+	           ) %>%
+  addMarkers(data = metro_lst$ext_est_Metro,
+	           popup = ~layer,
+	           label = ~layer,
+	           icon = list(iconUrl = subway_stop,
+	                       iconSize = c(20, 20)
 	                       )
 	           ) %>%
   addFlows(fl_lt$lng0,
@@ -394,6 +412,8 @@ detail_superpos[[2]] <- group_by(.data = detail_superposraw, od_act) %>%
 
 names(detail_superpos) <- c("freq", "DDA")
 
+# od_xy_spp <- nrow(filter(.data = od_x, parOD %in% comb_ac1))/
+#   nrow(od_xy)
 od_xy_spp <- nrow(filter(.data = od_sersen,
                                 PER_DTPM2 == y & (parOD %in% comb_ac1)
                          )
