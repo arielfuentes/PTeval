@@ -10,7 +10,8 @@ DDBB_e <- "[etapas201904]"
 #input objects
 A4 <- A4_stops(A4_nm)
 rts <- routes(rt_shp)
-rts <- dplyr::filter(.data = rts, UN == 6) #only for testing
+metro_lst <- metro_dt()
+#rts <- dplyr::filter(.data = rts, UN == 6) #only for testing
 stp <- stops(stp_shp)
 if(!exists("od_lst")) 
   od_lst <- od(DDBB_v = DDBB_v, DDBB_e = DDBB_e) 
