@@ -171,3 +171,20 @@ od <- function(DDBB_v, DDBB_e){
   names(od_lst) <- c("od4cov", "od4over")
   return(od_lst)
 }
+metro_dt <- function(){
+  library(dplyr)
+  library(sf)
+  #subway spatial data
+  red_metro <- sf::st_read(dsn = "data/Red_Metro.shp") %>%
+    select(layer)
+  est_Metro <- sf::st_read(dsn = "data/Est_Metro.shp") %>%
+    select(layer)
+  ext_est_Metro <- sf::st_read(dsn = "data/Est_Ext_Metro.shp") %>%
+    select(layer)
+  ext_Metro <- sf::st_read(dsn = "data/Ext_Red_Metro.shp") %>%
+    select(layer)
+  metro_lst <- list(red_metro, est_Metro, ext_est_Metro, ext_Metro)
+  names(metro_lst) <- c("red_metro", "est_Metro", "ext_est_Metro", "ext_Metro")
+  #output list
+  return(metro_lst)
+}
