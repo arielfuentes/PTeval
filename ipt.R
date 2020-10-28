@@ -188,3 +188,31 @@ metro_dt <- function(){
   #output list
   return(metro_lst)
 }
+
+mnz_cns2017 <- function(mnz_censo){
+  library(sf)
+  library(dplyr)
+  st_read(paste0("data/", mnz_censo)) %>%
+    select(Hab = PERSONAS, Dens)
+}
+
+legend_creator = function(col.regions, xlab, ylab, nbins){
+  bilegend = levelplot(matrix(1:(nbins * nbins), nrow = nbins),
+                       axes = FALSE, col.regions = col.regions,
+                       xlab = xlab, ylab = ylab,
+                       cuts = 8, colorkey = FALSE, scales = list(draw = 0))
+  bilegend
+}
+
+add_new_var = function(x, var1, var2, nbins, style = "fisher"){
+  class1 = suppressWarnings(findCols(classIntervals(c(x[[var1]]), 
+                                                    n = nbins, 
+                                                    style = style)))
+  
+  class2 = suppressWarnings(findCols(classIntervals(c(x[[var2]]), 
+                                                    n = nbins, 
+                                                    style = style)))
+  
+  x$new_class = class1 + nbins * (class2 - 1)
+  return(x)
+}
