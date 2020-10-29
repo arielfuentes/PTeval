@@ -3,6 +3,7 @@ library(rmarkdown)
 #calling base codes
 spp_gf <- magick::image_read("output/spp.gif")
 #run multiple Rmarkdown
+source("code/wrg_dt.R", encoding = "utf-8")
 per <- unique(od_sersen$PER_DTPM2)
 rutas <- rts$ROUTE_NAME
 lapply(X = per, 
