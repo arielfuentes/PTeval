@@ -1,3 +1,4 @@
+library(magick)
 library(tibble)
 library(png)
 library(dplyr)
