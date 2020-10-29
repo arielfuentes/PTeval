@@ -131,7 +131,6 @@ stops_sersen <- filter(.data = A4, ROUTE_NAME == x) %>%
   select(-Modo, -`Nombre Paradero`) %>%
   st_sf() %>%
   st_transform(4326)
-
 stops_sersen <- st_transform(stops_sersen, 4326)
 #add dir arrow
 fl_lt <- list(lng0 = geocoor[1,1],
@@ -145,7 +144,6 @@ od_sersen_sf <- filter(.data = od_sersen,
   na.omit() %>%
   arrange(orden_sub, orden_baj) %>%
   od2line(zones = stp)
-
 #most important od
 top_odline <- top_n(x = od_sersen_sf, 1, DDA)
 #isocrhone
@@ -336,7 +334,6 @@ buff_z <- lapply(X = 1:nrow(od_xy),
                                    dist = 300
                                    )
        )
-
 #extract bus & competitors stops
 inter_aa <- lapply(X = buff_z, 
                    FUN = function(aa) select(.data = st_drop_geometry(st_join(x = aa, y = stp, 
@@ -356,7 +353,6 @@ inter_ab <- lapply(X = inter_aa,
                                                   grupo
                                                   )
                    )
-
 #list of competitors OD
 comb_ac1 <- unlist(lapply(X = inter_ab, 
                   FUN = function(ab) as.vector(outer(ab[[1]]$CODINFRA.y, 
@@ -377,7 +373,6 @@ comb_ac2 <- unlist(lapply(X = inter_ab,
                                                               )
                           )
                    )
-
 detail_superposraw <- tibble(parOD = comb_ac1, od_act = comb_ac2) %>%
   left_join(od_x) %>%
   filter(is.na(DDA) == F)
@@ -409,9 +404,7 @@ detail_superpos[[2]] <- group_by(.data = detail_superposraw, od_act) %>%
   arrange(orden_sub, orden_baj) %>%
   select(par_usussub, par_usubaj, DDA) %>%
   od_to_odmatrix()
-
 names(detail_superpos) <- c("freq", "DDA")
-
 # od_xy_spp <- nrow(filter(.data = od_x, parOD %in% comb_ac1))/
 #   nrow(od_xy)
 od_xy_spp <- nrow(filter(.data = od_sersen,
