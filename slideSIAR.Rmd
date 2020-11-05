@@ -1,0 +1,257 @@
+---
+title: "SIAR <br> <small><em>Sistema de Análisis de Red</em></small>"
+author: "Estudios"
+date: "04-11-2020"
+output: 
+  ioslides_presentation:
+    css: "../code/custom.css"
+    # logo: "../data/logo/logoTransdev.png"
+    widescreen: true
+    smaller: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+library(knitr)
+library(htmltools)
+library(dplyr)
+library(sf)
+library(tmap)
+library(leaflet)
+library(leaflet.minicharts)
+library(stplanr)
+library(plotly)
+library(kableExtra)
+library(ggplot2)
+library(magick)
+library(mapboxapi)
+library(tibble)
+```
+
+## 1. Introducción
+
+<p style="color:#00b8e6"> SIAR es un procedimiento metodológico y de visualización que permite la red de transporte y el ámbito espacial. Posee los siguientes elementos distintivos: </p>
+
+- Identificar apropiadamente Contexto Espacial
+
+- Herramienta que permite realizar análisis personalizado
+
+- Puede incorporar información en base a necesidad de analista
+
+- Ayuda a toma de decisiones
+
+- Dinámico, Privado y Reproducible
+
+- En base a herramientas Open Source
+
+## 2. Adquisición de Datos
+
+&nbsp;&nbsp;Para adquirir los datos, estos deben ser obtenidos de distintas fuentes: *consulta a base de datos, archivos geográficos, de texto, etc.*
+
+Las base de datos tienen que ver con datos masivos consolidados por la empresa y el resto son datos externos.
+
+Los datos necesarios son los siguientes:
+
+- **Rutas:** Las rutas para buses se obtienen a partir del archivo geográfico en formato *<span style="color: #0000FF;">shape</span>* disponible en (http://www.dtpm.cl/index.php/noticias/pov2), y es unida con *<span style="color: #0000FF;">red de metro</span>* generada por Estudios.
+
+- **Paradas:** El procedimiento para Paradas es homogéneo a lo realizado con las Rutas.
+
+- **O-D para cobertura:** Se busca definir los sectores o zonas que identifique la *<span style="color: #FF0000;">cobertura Residencial y de Empleo</span>* para posteriormente extraer la información de validación bip!. La definición de estos sectores está en periodo de formulación.
+
+- **O-D para conectividad:** Se realiza una consulta **<span style="color: #008B8B;">SQL</span>** a la tabla de etapas  <span style="color: #0000FF;"> con el propósito de reconocer los cambios de etapas, distinguiendo los disintos recorridos.<sup>1</sup>
+
+<div class="footer" style="margin-bottom:-50px;"> 1 Pensado tanto para el análisis de Red como para licitación </div>
+
+
+## 3. Estadística Descriptiva Recorridos
+
+### a) Mapa de Recorrido
+
+````{r, message=FALSE, warning = F, echo=FALSE, fig.align='center'}
+#route
+ruta <- filter(.data = rts, ROUTE_NAME == x)
+geocoor <- st_transform(ruta, 4326) %>%
+  st_coordinates()
+#stops
+bus_stop <- "http://icons.iconarchive.com/icons/google/noto-emoji-travel-places/128/42561-bus-stop-icon.png"
+subway_stop <- "https://icons.iconarchive.com/icons/ncrow/new-york-subway/128/Subway-Car-icon.png"
+stops_sersen <- filter(.data = A4, ROUTE_NAME == x) %>%
+  select(Orden,
+         SIMT = `Código  paradero Usuario`) %>%
+  left_join(stp) %>%
+  select(-Modo, -`Nombre Paradero`) %>%
+  st_sf() %>%
+  st_transform(4326)
+stops_sersen <- st_transform(stops_sersen, 4326)
+#add dir arrow
+fl_lt <- list(lng0 = geocoor[1,1],
+              lat0 = geocoor[1,2],
+              lng1 = geocoor[nrow(geocoor),1],
+              lat1 = geocoor[nrow(geocoor),2],
+              flow = 0.1)
+#sersen od
+od_sersen_sf <- filter(.data = od_sersen,
+                       ROUTE_NAME == x, PER_DTPM2 == y) %>%
+  na.omit() %>%
+  arrange(orden_sub, orden_baj) %>%
+  od2line(zones = stp)
+#most important od
+top_odline <- top_n(x = od_sersen_sf, 1, DDA)
+#isocrhone
+o_iso <- st_transform(filter(.data = stp, CODINFRA == top_odline$par_subida), 4326) %>% mb_isochrone(profile = "walking", time = c(5, 15))
+# map
+tmap_mode("view")
+map <- tm_basemap(leaflet::providers$OpenStreetMap) +
+  tm_basemap(leaflet::providers$Stamen.Toner) +
+  tm_shape(o_iso) +
+  tm_polygons("time",
+              palette = c("#FFD700", "#ADFF2F"),
+              alpha = 0.4,
+              border.col = "black",
+              border.alpha = 0.5,
+              legend.show = F,
+              group = "isocrona") +
+  tm_shape(ruta) +
+  tm_lines(col = "#FF0000", lwd = 2) +
+  tm_shape(top_odline, name = "dl principal") +
+  tm_lines(col = "#0000FF", lwd = 2) +
+  tm_shape(metro_lst$red_metro, name = "Red de Metro") +
+  tm_lines(col = "#FFD700", lwd = 2) +
+  tm_shape(metro_lst$ext_Metro, name = "Extensión de Metro") +
+  tm_lines(col = "#808000", lwd = 2)
+
+#tmap2leaflet
+lft <- tmap_leaflet(map)
+lft %>%
+  addMapPane("overlay03", zIndex = 403) %>%
+  addMarkers(data = stops_sersen, 
+             popup = ~SIMT,
+             label = ~Orden,
+             icon = list(iconUrl = bus_stop,
+                         iconSize = c(30, 30)
+             )
+  ) %>%
+  addMarkers(data = metro_lst$est_Metro,
+             popup = ~layer,
+             label = ~layer,
+             icon = list(iconUrl = subway_stop,
+                         iconSize = c(20, 20)
+             )
+  ) %>%
+  addMarkers(data = metro_lst$ext_est_Metro,
+             popup = ~layer,
+             label = ~layer,
+             icon = list(iconUrl = subway_stop,
+                         iconSize = c(20, 20)
+             )
+  ) %>%
+  addFlows(fl_lt$lng0,
+           fl_lt$lat0,
+           fl_lt$lng1,
+           fl_lt$lat1,
+           fl_lt$flow) 
+```
+
+## 3. Estadística Descriptiva Recorridos
+
+### b)  Diagrama de Carga
+
+````{r, message=FALSE, warning=F, echo=FALSE, fig.align='center'}
+#stops_dicc
+A4_sersen <- filter(.data = A4, ROUTE_NAME == x) %>%
+  rename(`Servicio Sentido` = ROUTE_NAME)
+A42plt <- select(.data = A4_sersen,
+                 Orden,
+                 `Código  paradero Usuario`
+                 )
+#od_plot
+od_sersen_plt <- od_sersen_sf %>%
+  st_drop_geometry() %>%
+  select(orden_sub, orden_baj,  DDA)
+#od_structure
+od_str <- tibble(orden_sub = rep(c(1:max(od_sersen_plt$orden_baj)),
+                                 each = max(od_sersen_plt$orden_baj)),
+                 orden_baj = rep(c(1:max(od_sersen_plt$orden_baj)),
+                                 times = max(od_sersen_plt$orden_baj))) %>%
+  left_join(od_sersen_plt) %>%
+  left_join(select(.data = A42plt, orden_sub = Orden, par_sub = `Código  paradero Usuario`)) %>%
+  left_join(select(.data = A42plt, orden_baj = Orden, par_baj = `Código  paradero Usuario`)) 
+  
+#Demand Profile
+od_str_dcS <- select(.data = od_str, Parada = par_sub, Orden = orden_sub, Sube = DDA) %>%
+  replace(is.na(.), 0) %>%
+  group_by(Orden, Parada) %>%
+  summarise(Sube = sum(Sube)) %>%
+  ungroup()
+od_str_dcB <- select(.data = od_str, Parada = par_baj, Orden = orden_baj, Baja = DDA) %>%
+  replace(is.na(.), 0) %>%
+  group_by(Orden, Parada) %>%
+  summarise(Baja = sum(Baja)) %>%
+  ungroup()
+od_str_dc <- full_join(od_str_dcS, od_str_dcB) %>%
+  mutate(Carga = cumsum(Sube - Baja))
+#Heatmap IN-OUT Demand
+od_str_ly <- od_str %>%
+  select(par_sub, par_baj, DDA) %>%
+  od_to_odmatrix()
+#Plot Profile
+plot_ly(od_str_dc, width = 1000, height = 400) %>%
+    add_trace(x = ~Orden, y = ~Sube, type = "bar", name = "Subidas (TRX)",
+              marker = list(color = "#3399FF"), hovertemplate = 'Sube: %{y:.2f} TRX') %>%
+    add_trace(x = ~Orden, y = ~Baja, type = "bar", name = "Bajadas (TRX)",
+              marker = list(color = "#FF6633"), hovertemplate = 'Baja: %{y:.2f} TRX') %>%
+    add_trace(x = ~Orden, y = ~Carga, type = "scatter", mode = "lines", name = "Carga (TRX)",
+              line = list(color = '#339900'), hovertemplate = 'Carga: %{y:.2f} TRX') %>%
+    layout(title = ~paste("Diagrama de Carga"),
+           xaxis = list(title = "Paradas", dtick = 1), 
+           yaxis = list(side = "left", title = "Cantidad de Pasajeros (TRX)")
+           )
+````
+
+## 3. Estadística Descriptiva Recorridos
+
+### c)  Sube-Baja Recorrido
+
+````{r, message=FALSE, warning=F, echo=FALSE, fig.align='center'}
+#Plot heatmap
+plot_ly(z = od_str_ly, #width = 1000, height = 300,
+        type = "heatmap",
+        colors = "YlOrRd",
+        x=colnames(od_str_ly),
+        y=rownames(od_str_ly)
+        ) %>%
+  layout(title = "Sube-Baja Servicio",
+         xaxis = list(title = "Parada de bajada"),
+         yaxis = list(title = "Parada de subida")
+         )
+````
+
+## 4. Indicadores
+
+Los principales indicadores fueron tomados y adaptados desde la investigación de Yiling Yeng & Yadan Yan, 2019.(https://doi.org/10.1155/2019/5024253)
+
+### a) Superposición
+
+&nbsp;&nbsp;La superposición es definidad como la demanda de viaje entre paradas de la ruta en estudio pueda ser reemplazada por otra ruta del sistema. Mientras más alta sea la superposición, mayor es la posibilidad de que la ruta sea reemplazada.
+&nbsp;&nbsp;La superposición es calculada según la siguiente fórmula:
+
+$\begin{aligned}Spp_i = \frac{\sum_{j = 1}^{n} Spp_{j}}{pares_j}\end{aligned}$
+
+Spp = Superposición,
+i = índice de ruta
+j = índice de pares de demanda de viajes
+
+## 4. Indicadores
+
+&nbsp;&nbsp;En términos prácticos se realizará un buffer a cada parada de cualquier OD, y los OD producidos en otras rutas que intersecten a ambos, serán considerados como superposición.
+
+```{r, message=FALSE, warning = FALSE, echo=FALSE, fig.align='center', out.width = "50%"}
+# g_spp
+spp_gf
+```
+
+## 4. Indicadores
+
+### b) Cobertura
+
+### c) Conectividad

@@ -1,0 +1,7 @@
+.back { background-color: #FFE4E1; }
+.footer {
+    color: red;
+    position: fixed; top: 90%;
+    text-align: left; width:100%;
+    font-size: 50%;
+}
