@@ -5,7 +5,7 @@ date: "04-11-2020"
 output: 
   ioslides_presentation:
     css: "../code/custom.css"
-    # logo: "../data/logo/logoTransdev.png"
+    logo: "../data/logo/logoTransdev.png"
     widescreen: true
     smaller: true
 ---
@@ -175,8 +175,8 @@ od_str <- tibble(orden_sub = rep(c(1:max(od_sersen_plt$orden_baj)),
                                  times = max(od_sersen_plt$orden_baj))) %>%
   left_join(od_sersen_plt) %>%
   left_join(select(.data = A42plt, orden_sub = Orden, par_sub = `Código  paradero Usuario`)) %>%
-  left_join(select(.data = A42plt, orden_baj = Orden, par_baj = `Código  paradero Usuario`)) 
-  
+  left_join(select(.data = A42plt, orden_baj = Orden, par_baj = `Código  paradero Usuario`))
+
 #Demand Profile
 od_str_dcS <- select(.data = od_str, Parada = par_sub, Orden = orden_sub, Sube = DDA) %>%
   replace(is.na(.), 0) %>%
@@ -203,7 +203,7 @@ plot_ly(od_str_dc, width = 1000, height = 400) %>%
     add_trace(x = ~Orden, y = ~Carga, type = "scatter", mode = "lines", name = "Carga (TRX)",
               line = list(color = '#339900'), hovertemplate = 'Carga: %{y:.2f} TRX') %>%
     layout(title = ~paste("Diagrama de Carga"),
-           xaxis = list(title = "Paradas", dtick = 1), 
+           xaxis = list(title = "Paradas", dtick = 1),
            yaxis = list(side = "left", title = "Cantidad de Pasajeros (TRX)")
            )
 ````
@@ -237,11 +237,13 @@ Los principales indicadores fueron tomados y adaptados desde la investigación d
 
 $\begin{aligned}Spp_i = \frac{\sum_{j = 1}^{n} Spp_{j}}{pares_j}\end{aligned}$
 
-Spp = Superposición,
-i = índice de ruta
-j = índice de pares de demanda de viajes
+<br>Spp = Superposición,</br>
+<br>i = índice de ruta,</br>
+<br>j = índice de pares de demanda de viajes</br>
 
 ## 4. Indicadores
+
+### a) Superposición
 
 &nbsp;&nbsp;En términos prácticos se realizará un buffer a cada parada de cualquier OD, y los OD producidos en otras rutas que intersecten a ambos, serán considerados como superposición.
 
@@ -250,8 +252,182 @@ j = índice de pares de demanda de viajes
 spp_gf
 ```
 
+```{r, message=FALSE, warning = FALSE, echo=FALSE, fig.align='center'}
+#od by bus & period 
+od_xy <- filter(.data = od_sersen, ROUTE_NAME == x & PER_DTPM2 == y)
+# demand by OD only
+od_x <- filter(.data = od_sersen, PER_DTPM2 == y) %>%
+  select(parOD, DDA) %>%
+  group_by(parOD) %>%
+  summarise(DDA = sum(DDA))
+buff_z <- lapply(X = 1:nrow(od_xy),
+       FUN = function(z) st_buffer(x = dplyr::arrange(left_join(filter(.data = stp,
+                                              CODINFRA %in% c(od_xy$par_subida[z],
+                                                              od_xy$par_bajada[z])), 
+                                              select(.data = A4_sersen,
+                                                     CODINFRA = `Código paradero TS`, 
+                                                     Orden)
+                                              ), Orden),
+                                   dist = 300
+                                   )
+       )
+
+#extract bus & competitors stops
+inter_aa <- lapply(X = buff_z, 
+                   FUN = function(aa) select(.data = st_drop_geometry(st_join(x = aa, y = stp, 
+                                                                           join = st_intersects)
+                                                                      ),
+                                             CODINFRA.x, CODINFRA.y
+                                             )
+                   )
+#create OD
+inter_ab <- lapply(X = inter_aa,
+                   FUN = function(ab) group_split(.tbl = add_column(.data = ab,
+                                                                    grupo = str_sub(row.names(ab),
+                                                                                    start = 1,
+                                                                                    end = 1
+                                                                                    )
+                                                                    ),
+                                                  grupo
+                                                  )
+                   )
+
+#list of competitors OD
+comb_ac1 <- unlist(lapply(X = inter_ab, 
+                  FUN = function(ab) as.vector(outer(ab[[1]]$CODINFRA.y, 
+                                                     ab[[2]]$CODINFRA.y, 
+                                                     paste, 
+                                                     sep = "|"
+                                                     )
+                                               )
+                         )
+                  )
+#list of bus OD                  
+comb_ac2 <- unlist(lapply(X = inter_ab, 
+                                 FUN = function(ab) as.vector(outer(ab[[1]]$CODINFRA.x, 
+                                                                    ab[[2]]$CODINFRA.x, 
+                                                                    paste, 
+                                                                    sep = "|"
+                                                                    )
+                                                              )
+                          )
+                   )
+
+detail_superposraw <- tibble(parOD = comb_ac1, od_act = comb_ac2) %>%
+  left_join(od_x) %>%
+  filter(is.na(DDA) == F)
+#table structure
+detail_superpos_str <- tibble(orden_sub = rep(c(1:max(od_sersen_plt$orden_baj)),
+                                 each = max(od_sersen_plt$orden_baj)),
+                 orden_baj = rep(c(1:max(od_sersen_plt$orden_baj)),
+                                 times = max(od_sersen_plt$orden_baj))) %>%
+  left_join(select(.data = A4_sersen, orden_sub = Orden, par_sub = `Código paradero TS`)) %>%
+  left_join(select(.data = A4_sersen, orden_baj = Orden, par_baj = `Código paradero TS`)) %>%
+  unite("od_act", par_sub, par_baj, sep = "|")
+#matrix
+detail_superpos <- list()
+detail_superpos[[1]] <- group_by(.data = detail_superposraw, od_act) %>%
+  summarise(freq = n()) %>%
+  right_join(detail_superpos_str) %>%
+  separate(col = "od_act", into = c("par_sub", "par_baj"), sep = "[|]") %>%
+  left_join(select(.data = A4_sersen, orden_sub = Orden, par_usussub = `Código  paradero Usuario`)) %>%
+  left_join(select(.data = A4_sersen, orden_baj = Orden, par_usubaj = `Código  paradero Usuario`)) %>%
+  arrange(orden_sub, orden_baj) %>%
+  select(par_usussub, par_usubaj, freq) %>%
+  od_to_odmatrix()
+detail_superpos[[2]] <- group_by(.data = detail_superposraw, od_act) %>%
+  summarise(DDA = sum(DDA)) %>%
+  right_join(detail_superpos_str) %>%
+  separate(col = "od_act", into = c("par_sub", "par_baj"), sep = "[|]") %>%
+  left_join(select(.data = A4_sersen, orden_sub = Orden, par_usussub = `Código  paradero Usuario`)) %>%
+  left_join(select(.data = A4_sersen, orden_baj = Orden, par_usubaj = `Código  paradero Usuario`)) %>%
+  arrange(orden_sub, orden_baj) %>%
+  select(par_usussub, par_usubaj, DDA) %>%
+  od_to_odmatrix()
+
+names(detail_superpos) <- c("freq", "DDA")
+
+od_xy_spp <- nrow(filter(.data = od_sersen,
+                                PER_DTPM2 == y & (parOD %in% comb_ac1)
+                         )
+                  )/nrow(od_xy)
+```
+## 4. Indicadores
+
+### a) Superposición
+
+`r paste("El índice de superposición para el Servicio Sentido", x, "en el periodo", y, "es:", round(od_xy_spp, 2), sep = " ")`
+
+````{r, message=FALSE, warning=F, echo=FALSE, fig.align='center'}
+#Plot heatmap
+plot_ly(z = detail_superpos[[1]], 
+        type = "heatmap",
+        colors = "YlGnBu",
+        x=colnames(detail_superpos[[1]]),
+        y=rownames(detail_superpos[[1]])
+        ) %>%
+  layout(title = "Nivel de Superposición por cantidad de competencia",
+         xaxis = list(title = "Parada de bajada"),
+         yaxis = list(title = "Parada de subida")
+         )
+````
+
+## 4. Indicadores
+
+### a) Superposición
+
+````{r, message=FALSE, warning=F, echo=FALSE, fig.align='center'}
+#Plot heatmap
+plot_ly(z = detail_superpos[[2]], 
+        type = "heatmap",
+        colors = "BuPu",
+        x=colnames(detail_superpos[[2]]),
+        y=rownames(detail_superpos[[2]])
+        ) %>%
+  layout(title = "Nivel de Superposición por demanda global",
+         xaxis = list(title = "Parada de bajada"),
+         yaxis = list(title = "Parada de subida")
+         )
+````
+
 ## 4. Indicadores
 
 ### b) Cobertura
 
+Aquí se identifican dos tipos de coberturas, residencial y de empleo; y el nivel en que cada recorrido cubre ambas.
+
+$\begin{aligned}Cov_i = \frac{\sum_{j = 1}^{n} Con_{j}}{nstop}\end{aligned}$
+
+<br>Cov = Cobertura,</br>
+<br>nstop = número de paradas,</br>
+<br>i = índice de ruta,</br>
+<br>j = índice de tipo de cobertura</br>
+
+## 4. Indicadores
+
 ### c) Conectividad
+
+Consiste visualizar el nivel de transferencia de un recorrido a otro<sup>1</sup>, podrá desclasificarse a Unidad de Negocio<sup>2</sup>.
+
+$\begin{aligned}Conn_i = \frac{\sum_{j = 1}^{n} Conn_{j}}{nstop}\end{aligned}$
+
+<br>Conn = Conectividad,</br>
+<br>nstop = número de paradas,</br>
+<br>i = índice de ruta,</br>
+<br>j = índice de pares de demanda de viajes</br>
+
+<div class="footer" style="margin-bottom:-50px;"> 1 Considera Transferencia Directa como Indirecta <br>2 Pensado tanto para el análisis de Red como para licitación</br></div>
+
+## 5. Conclusiones
+
+- Orientación a toma de decisiones
+
+- Flexibilidad en el Análisis
+
+- Adaptable a cualquier ciudad
+
+- Análisis específico como Global
+
+- Posibilidad de agregar mas módulos de análisis
+
+- Necesidad de continuar con desarrollo y aumentar valor al negocio
