@@ -30,19 +30,21 @@ library(tibble)
 
 ## 1. Introducción
 
-<p style="color:#00b8e6"> SIAR es un procedimiento metodológico y de visualización que permite la red de transporte y el ámbito espacial. Posee los siguientes elementos distintivos: </p>
+<p style="color:#00b8e6"> SIAR es un procedimiento metodológico y de visualización que permite analizar la red de transporte e incluir el ámbito espacial. El análisis considera la relación en la ciudad  como lo define Manheim, es decir, <b>Sistema de Transporte, Sistema de Actividades y el Patrón de Flujos.</b></p>   
+
+Esta herramienta posee los siguientes elementos distintivos: 
 
 - Identificar apropiadamente Contexto Espacial
 
 - Herramienta que permite realizar análisis personalizado
 
-- Puede incorporar información en base a necesidad de analista
+- Puede incorporar información con base en la necesidad del analista
 
 - Ayuda a toma de decisiones
 
 - Dinámico, Privado y Reproducible
 
-- En base a herramientas Open Source
+- Con base en herramientas Open Source
 
 ## 2. Adquisición de Datos
 
@@ -50,7 +52,7 @@ library(tibble)
 
 Las base de datos tienen que ver con datos masivos consolidados por la empresa y el resto son datos externos.
 
-Los datos necesarios son los siguientes:
+Para este primer módulo, los datos necesarios son los siguientes:
 
 - **Rutas:** Las rutas para buses se obtienen a partir del archivo geográfico en formato *<span style="color: #0000FF;">shape</span>* disponible en (http://www.dtpm.cl/index.php/noticias/pov2), y es unida con *<span style="color: #0000FF;">red de metro</span>* generada por Estudios.
 
@@ -119,7 +121,6 @@ map <- tm_basemap(leaflet::providers$OpenStreetMap) +
   tm_lines(col = "#FFD700", lwd = 2) +
   tm_shape(metro_lst$ext_Metro, name = "Extensión de Metro") +
   tm_lines(col = "#808000", lwd = 2)
-
 #tmap2leaflet
 lft <- tmap_leaflet(map)
 lft %>%
@@ -155,7 +156,6 @@ lft %>%
 ## 3. Estadística Descriptiva Recorridos
 
 ### b)  Diagrama de Carga
-
 ````{r, message=FALSE, warning=F, echo=FALSE, fig.align='center'}
 #stops_dicc
 A4_sersen <- filter(.data = A4, ROUTE_NAME == x) %>%
@@ -176,7 +176,6 @@ od_str <- tibble(orden_sub = rep(c(1:max(od_sersen_plt$orden_baj)),
   left_join(od_sersen_plt) %>%
   left_join(select(.data = A42plt, orden_sub = Orden, par_sub = `Código  paradero Usuario`)) %>%
   left_join(select(.data = A42plt, orden_baj = Orden, par_baj = `Código  paradero Usuario`))
-
 #Demand Profile
 od_str_dcS <- select(.data = od_str, Parada = par_sub, Orden = orden_sub, Sube = DDA) %>%
   replace(is.na(.), 0) %>%
@@ -271,7 +270,6 @@ buff_z <- lapply(X = 1:nrow(od_xy),
                                    dist = 300
                                    )
        )
-
 #extract bus & competitors stops
 inter_aa <- lapply(X = buff_z, 
                    FUN = function(aa) select(.data = st_drop_geometry(st_join(x = aa, y = stp, 
@@ -291,7 +289,6 @@ inter_ab <- lapply(X = inter_aa,
                                                   grupo
                                                   )
                    )
-
 #list of competitors OD
 comb_ac1 <- unlist(lapply(X = inter_ab, 
                   FUN = function(ab) as.vector(outer(ab[[1]]$CODINFRA.y, 
@@ -312,7 +309,6 @@ comb_ac2 <- unlist(lapply(X = inter_ab,
                                                               )
                           )
                    )
-
 detail_superposraw <- tibble(parOD = comb_ac1, od_act = comb_ac2) %>%
   left_join(od_x) %>%
   filter(is.na(DDA) == F)
@@ -344,9 +340,7 @@ detail_superpos[[2]] <- group_by(.data = detail_superposraw, od_act) %>%
   arrange(orden_sub, orden_baj) %>%
   select(par_usussub, par_usubaj, DDA) %>%
   od_to_odmatrix()
-
 names(detail_superpos) <- c("freq", "DDA")
-
 od_xy_spp <- nrow(filter(.data = od_sersen,
                                 PER_DTPM2 == y & (parOD %in% comb_ac1)
                          )
