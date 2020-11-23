@@ -56,7 +56,7 @@ Para este primer módulo, los datos necesarios son los siguientes:
 
 - **Rutas:** Las rutas para buses se obtienen a partir del archivo geográfico en formato *<span style="color: #0000FF;">shape</span>* disponible en (http://www.dtpm.cl/index.php/noticias/pov2), y es unida con *<span style="color: #0000FF;">red de metro</span>* generada por Estudios.
 
-- **Paradas:** El procedimiento para Paradas es homogéneo a lo realizado con las Rutas.
+- **Paradas:** El procedimiento para Paradas es análogo a lo realizado con las Rutas.
 
 - **O-D para cobertura:** Se busca definir los sectores o zonas que identifique la *<span style="color: #FF0000;">cobertura Residencial y de Empleo</span>* para posteriormente extraer la información de validación bip!. La definición de estos sectores está en periodo de formulación.
 
