@@ -7,12 +7,14 @@ stp_shp <- "Paradas 06Jul2019"
 DDBB_v <- "[viajes201904]"
 DDBB_e <- "[etapas201904]"
 mnz_censo <- "mnz_cns2017.gpkg"
+Region_nm <- "Región Metropolitana de Santiago"
 
 #input objects
 A4 <- A4_stops(A4_nm)
 rts <- routes(rt_shp)
 metro_lst <- metro_dt()
 censo <- mnz_cns2017(mnz_censo)
+suelo <- landuse(Region_nm)
 #rts <- dplyr::filter(.data = rts, UN == 6) #only for testing
 stp <- stops(stp_shp)
 if(!exists("od_lst")) 
