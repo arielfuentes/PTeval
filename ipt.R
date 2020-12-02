@@ -189,6 +189,33 @@ metro_dt <- function(){
   return(metro_lst)
 }
 
+landuse <- function(Region_nm){
+  #libraries
+  library(dplyr)
+  library(osmdata)
+  library(sf)
+  #data
+  zones <- st_read("data/Regional.shp") %>%
+    st_transform(4326) %>%
+    filter(Region == Region_nm) %>%
+    select(codregion, Region)
+  ###############
+  #operations
+  residential <- opq(bbox = st_bbox(zones)) %>%
+    add_osm_feature(key = "landuse", value = "residential") %>%
+    osmdata_sf()
+  residential <- residential$osm_polygons %>%
+    select(landuse) %>%
+    mutate(landuse = "residential") %>%
+    st_transform(32719) %>%
+    st_intersection(x = st_transform(zones, 32719))
+  oth_uses <- st_difference(st_transform(zones, 32719), st_union(residential)) %>%
+    mutate(landuse = "other") %>%
+    relocate(landuse, .before = geometry) %>%
+    st_transform(4326)
+  landuse <- rbind(residential, oth_uses)
+}
+
 mnz_cns2017 <- function(mnz_censo){
   library(sf)
   library(dplyr)
