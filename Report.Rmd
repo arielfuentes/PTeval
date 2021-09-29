@@ -24,6 +24,9 @@ library(ggplot2)
 library(magick)
 library(mapboxapi)
 library(tibble)
+library(classInt)
+library(lattice)
+library(pals)
 ```
 
 
@@ -74,7 +77,7 @@ SELECT SUM(CAST([factorexpansion] AS FLOAT)) AS DDA,
 
 Este punto está en desarrollo; dado que solo describe las áreas que se cubren, y no las que no se abordan.
 
-c) **O-D para conectividad:** Se realiza una consulta **<span style="color: #008B8B;">SQL</span>** a la tabla de etapas  <span style="color: #0000FF;">`r DDBB_v[1]`</span>
+d) **O-D para conectividad:** Se realiza una consulta **<span style="color: #008B8B;">SQL</span>** a la tabla de etapas  <span style="color: #0000FF;">`r DDBB_v[1]`</span>
 con el propósito de obtener los **"orígenes-destino" de etapas**, es decir, donde *<span style="color: #FF0000;">suben y bajan los usuarios</span>* para los disintos recorridos, con el propósito de construir el indicador de conectividad.
 
 ```{sql, eval=F}
@@ -121,6 +124,12 @@ SELECT SUM(CAST([f_exp_servicioperiodots] AS FLOAT)) AS DDA,
 ruta <- filter(.data = rts, ROUTE_NAME == x)
 geocoor <- st_transform(ruta, 4326) %>%
   st_coordinates()
+#censo
+cns <- st_intersection(censo, st_buffer(ruta, 2000)) %>%
+  select(Hab, Dens) %>%
+  add_new_var(var1 = "Hab", 
+              var2 = "Dens", 
+              nbins = 3)
 #stops
 bus_stop <- "http://icons.iconarchive.com/icons/google/noto-emoji-travel-places/128/42561-bus-stop-icon.png"
 subway_stop <- "https://icons.iconarchive.com/icons/ncrow/new-york-subway/128/Subway-Car-icon.png"
@@ -149,8 +158,15 @@ top_odline <- top_n(x = od_sersen_sf, 1, DDA)
 #isocrhone
 o_iso <- st_transform(filter(.data = stp, CODINFRA == top_odline$par_subida), 4326) %>% mb_isochrone(profile = "walking", time = c(5, 15))
 # map
+bilegend = legend_creator(stevens.pinkblue(n = 9), 
+                          xlab = "Hab", 
+                          ylab = "Dens", 
+                          nbins = 3)
 map <- tm_basemap(leaflet::providers$OpenStreetMap) +
   tm_basemap(leaflet::providers$Stamen.Toner) +
+  # tm_basemap(leaflet::providers$Thunderforest.TransportDark) +
+  tm_shape(cns) +
+  tm_polygons("new_class", style = "cat", palette = stevens.pinkblue(n = 9), legend.show = F) +
   tm_shape(o_iso) +
   tm_polygons("time", 
               palette = c("#FFD700", "#ADFF2F"), 
@@ -166,8 +182,8 @@ map <- tm_basemap(leaflet::providers$OpenStreetMap) +
   tm_shape(metro_lst$red_metro, name = "Red de Metro") +
   tm_lines(col = "#FFD700", lwd = 2) +
   tm_shape(metro_lst$ext_Metro, name = "Extensión de Metro") +
-  tm_lines(col = "#808000", lwd = 2)
-  
+  tm_lines(col = "#808000", lwd = 2) +
+  tm_layout(legend.outside = TRUE)
 #tmap2leaflet
 lft <- tmap_leaflet(map)
 lft %>%
@@ -198,6 +214,9 @@ lft %>%
            fl_lt$lng1,
            fl_lt$lat1,
            fl_lt$flow) 
+````
+````{r, message=FALSE, warning = F, echo=FALSE, fig.align='center', fig.height = 1.2, fig.width = 1.2}
+plot(bilegend)
 ````
 
 <center>En el cuadro a continuación se visualizan los principales indicadores del **servicio-sentido-periodo**</center>
@@ -405,8 +424,6 @@ detail_superpos[[2]] <- group_by(.data = detail_superposraw, od_act) %>%
   select(par_usussub, par_usubaj, DDA) %>%
   od_to_odmatrix()
 names(detail_superpos) <- c("freq", "DDA")
-# od_xy_spp <- nrow(filter(.data = od_x, parOD %in% comb_ac1))/
-#   nrow(od_xy)
 od_xy_spp <- nrow(filter(.data = od_sersen,
                                 PER_DTPM2 == y & (parOD %in% comb_ac1)
                          )
