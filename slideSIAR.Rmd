@@ -28,6 +28,14 @@ library(mapboxapi)
 library(tibble)
 ```
 
+<style type="text/css">
+
+p {
+  text-align: justify;
+}
+}
+</style>
+
 ## 1. Introducción
 
 <p style="color:#00b8e6"> SIAR es un procedimiento metodológico y de visualización que permite la red de transporte y el ámbito espacial. Posee los siguientes elementos distintivos: </p>
