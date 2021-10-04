@@ -213,7 +213,7 @@ landuse <- function(Region_nm){
     mutate(landuse = "other") %>%
     relocate(landuse, .before = geometry) %>%
     st_transform(4326)
-  landuse <- rbind(residential, oth_uses)
+  landuse <- rbind(st_transform(residential, 4326), oth_uses)
 }
 
 mnz_cns2017 <- function(mnz_censo){
