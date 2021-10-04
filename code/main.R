@@ -3,6 +3,9 @@ library(rmarkdown)
 #calling base codes
 #run multiple Rmarkdown
 source("code/wrg_dt.R", encoding = "utf-8")
+if(exists("output/spp.gif") == F){
+  source("code/overlapDescrip.R", encoding = "utf-8")
+}
 spp_gf <- magick::image_read("output/spp.gif")
 per <- unique(od_sersen$PER_DTPM2)
 rutas <- rts$ROUTE_NAME
