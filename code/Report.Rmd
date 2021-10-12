@@ -472,7 +472,7 @@ clip <- st_intersection(ruta, st_transform(suelo, 32719)) %>%
   summarise(distancia = sum(dist2)) %>%
   ungroup()
 sumtot <- sum(clip$distancia, na.rm = T)
-clip <- mutate(inter, distancia = distancia/sumtot*100)
+clip <- mutate(clip, distancia = distancia/sumtot*100)
 #graph
 t <- list(
   family = "Forte",
