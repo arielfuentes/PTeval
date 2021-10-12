@@ -88,7 +88,8 @@ od <- function(DDBB_v, DDBB_e){
                         Server   = "10.222.128.21,9433",
                         Database = "uchile",
                         UID      = rstudioapi::askForPassword("Database user"),
-                        PWD      = rstudioapi::askForPassword("Database password"))
+                        PWD      = rstudioapi::askForPassword("Database password"),
+                        encoding = "latin1")
   #sql
   ##od4coverage
   sql_od4cov <- paste0("SELECT SUM(CAST([factorexpansion] AS FLOAT)) AS DDA,

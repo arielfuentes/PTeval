@@ -460,6 +460,39 @@ plot_ly(z = detail_superpos[[2]],
 ````
 
 #### b) Cobertura
+
+Para aproximar la cobertura, se utiliza los datos disponibles de **OSM**, por lo que definen 2 categorías: *residencial y otro*. A partir de esto, se generará el porcentaje de cobertura según categoría para cada recorrido a través de un geoproceso.
+
+````{r, message=FALSE, warning=F, echo=FALSE}
+#geoprocess
+clip <- st_intersection(ruta, st_transform(suelo, 32719)) %>%
+  mutate(dist2 = st_length(x = .)) %>%
+  st_drop_geometry() %>%
+  group_by(ROUTE_NAME, landuse) %>%
+  summarise(distancia = sum(dist2)) %>%
+  ungroup()
+sumtot <- sum(clip$distancia, na.rm = T)
+clip <- mutate(inter, distancia = distancia/sumtot*100)
+#graph
+t <- list(
+  family = "Forte",
+  size = 14,
+  color = "#FF0000")
+
+plot_ly(data = clip, 
+        labels = ~landuse, 
+        values = ~distancia, 
+        type = "pie", 
+        marker = list(colors = c('#CD5C5C', '#6495ED')),
+        width = 400, 
+        height = 400
+        ) %>%
+  layout(title = "Distancia por Cobertura",
+         font = t
+         ) 
+````
+
+
 #### c) Conectividad
 
 ### 3. Resultados

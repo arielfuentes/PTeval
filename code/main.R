@@ -8,10 +8,12 @@ if(exists("output/spp.gif") == F){
 }
 spp_gf <- magick::image_read("output/spp.gif")
 per <- unique(od_sersen$PER_DTPM2)
+per <- "04 - PMA"
 rutas <- rts$ROUTE_NAME
+rutas <- "108I"
 lapply(X = per, 
        FUN = function (y) lapply(X = rutas, 
-                                 FUN = function(x) tryCatch(render(input = "code/Reporte2.Rmd", 
+                                 FUN = function(x) tryCatch(render(input = "code/Report.Rmd", 
                                                           output_file =  paste("reporte_", x, "_", y, ".html", sep=''), 
                                                           output_dir = "output/", 
                                                           encoding = "utf-8"),
