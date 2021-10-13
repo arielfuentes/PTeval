@@ -1,6 +1,6 @@
 ---
 title: <center> `r paste("Indicadores de recorrido", x, sep = " ")` </center>
-author: "Ariel Fuentes"
+author: "Estudios Transdev Chile"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
@@ -36,7 +36,7 @@ library(pals)
 
 <center><h4>**<span style="color: #FF0000;">`r pull(.data = filter(.data = DDAsersen, ROUTE_NAME == x, PER_DTPM2 == y), Eleccion)`</span>**</h4></center>
 
-&nbsp;&nbsp;Este reporte permite dar seguimiento a los avances que se realizan en proyecto de "6 indicadores" para evaluar el diseño de la red de transporte, que tendrá su énfasis en evaluar los recorridos de RBU. Estos indicadores son:
+&nbsp;&nbsp;Este reporte permite dar seguimiento a los avances que se realizan en proyecto de "3 indicadores" para evaluar el diseño de la red de transporte, que tendrá su énfasis en los recorridos de la ciudad. Estos indicadores son:
 
 - Superposición (Bus y Metro)
 - Cobertura (Residencial y Empleo)
