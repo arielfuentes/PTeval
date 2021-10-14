@@ -4,8 +4,10 @@ author: "Estudios Transdev Chile"
 date: "`r format(Sys.time(), '%d %B, %Y')`"
 output: 
   html_document:
-    theme: simplex
-    highlight: tango
+    toc: TRUE
+    number_sections: FALSE
+    toc_float: FALSE 
+    css: "../code/style.css"
 ---
 
 ```{r setup, include=FALSE}
