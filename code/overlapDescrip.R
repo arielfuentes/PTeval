@@ -59,3 +59,4 @@ saveGIF(movie.name = "spp.gif",
                                              ) 
                       ) 
         )
+rm(df_spp, si, no, ct_lst, g_spp, imgs)
