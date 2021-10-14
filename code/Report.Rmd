@@ -130,6 +130,7 @@ cns <- st_intersection(censo, st_buffer(ruta, 2000)) %>%
   add_new_var(var1 = "Hab", 
               var2 = "Dens", 
               nbins = 3)
+rm(censo)
 #stops
 bus_stop <- "http://icons.iconarchive.com/icons/google/noto-emoji-travel-places/128/42561-bus-stop-icon.png"
 subway_stop <- "https://icons.iconarchive.com/icons/ncrow/new-york-subway/128/Subway-Car-icon.png"
@@ -490,6 +491,7 @@ plot_ly(data = clip,
   layout(title = "Distancia por Cobertura",
          font = t
          ) 
+rm(suelo)
 ````
 
 
