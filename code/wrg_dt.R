@@ -42,6 +42,8 @@ od_sersen <- right_join(lazy_dt(od_lst$od4over),
   as_tibble() %>%
   na.omit() %>%
   select(c(5:6, 1:2, 7:10, 3))
+od4cov <- od_lst$od4cov
+rm(od_lst)
 #add order 
 od_sersen <- left_join(lazy_dt(od_sersen), 
                         lazy_dt(select(.data = A4, 
