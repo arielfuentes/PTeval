@@ -92,20 +92,20 @@ od <- function(DDBB_v, DDBB_e){
                         encoding = "latin1")
   #sql
   ##od4coverage
-  sql_od4cov <- paste0("SELECT SUM(CAST([factorexpansion] AS FLOAT)) AS DDA,
-                               [paraderosubida], 
-                               [paraderobajada] 
-                        FROM [uchile].[dbo].", DDBB_v, 
-                        " WHERE tipodia = 'LABORAL' AND 
-                          periodomediodeviaje = '04 - PUNTA MANANA' AND
-                          [paraderosubida] <> '-' AND 
-                          [paraderobajada] <> '-'
-                        GROUP BY [paraderosubida], 
-                                 [paraderobajada];"
-                       )
-  od4cov <- lazy_dt(DBI::dbGetQuery(conn = con, 
-                                    statement = sql_od4cov)
-                    )
+  # sql_od4cov <- paste0("SELECT SUM(CAST([factorexpansion] AS FLOAT)) AS DDA,
+  #                              [paraderosubida], 
+  #                              [paraderobajada] 
+  #                       FROM [uchile].[dbo].", DDBB_v, 
+  #                       " WHERE tipodia = 'LABORAL' AND 
+  #                         periodomediodeviaje = '04 - PUNTA MANANA' AND
+  #                         [paraderosubida] <> '-' AND 
+  #                         [paraderobajada] <> '-'
+  #                       GROUP BY [paraderosubida], 
+  #                                [paraderobajada];"
+  #                      )
+  # od4cov <- lazy_dt(DBI::dbGetQuery(conn = con, 
+  #                                   statement = sql_od4cov)
+  #                   )
   #MH2period
   sql_per <- paste0("SELECT [HR_MH] AS [mh_subida],
                             [PER_DTPM2],
@@ -167,9 +167,31 @@ od <- function(DDBB_v, DDBB_e){
                          false = DDA,
                          missing = NA_real_)
            )
+  sql_od4connec <- paste0("SELECT SUM([Demanda]) AS Demanda 
+                              ,[netapa]
+                              ,[periodo]
+                              ,[serv_1era]
+                              ,[serv_2da]
+                              ,[serv_3era]
+                              ,[serv_4ta]
+                              ,[paraderobajada_1era]
+                              ,[paraderobajada_2da]
+                              ,[paraderobajada_3era]
+                          FROM [Asig].[dbo].", DDBB_v,
+                          "GROUP BY ,[netapa]
+                              ,[periodo]
+                              ,[serv_1era]
+                              ,[serv_2da]
+                              ,[serv_3era]
+                              ,[serv_4ta]
+                              ,[paraderobajada_1era]
+                              ,[paraderobajada_2da]
+                              ,[paraderobajada_3era]")
+  od4connec <- lazy_dt(DBI::dbGetQuery(conn = con, 
+                                       statement = sql_od4connec))
   #output_list
-  od_lst <- list(od4cov, od4over)
-  names(od_lst) <- c("od4cov", "od4over")
+  od_lst <- list(od4over, od4connec)
+  names(od_lst) <- c("od4over", "od4connec")
   return(od_lst)
 }
 metro_dt <- function(){
