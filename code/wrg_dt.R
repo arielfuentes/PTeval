@@ -4,7 +4,7 @@ source(file = "code/ipt.R", encoding = "utf-8")
 A4_nm <- "2019-04-01_consolidado_anexo4_(Circunvalación)_anual.xlsx"
 rt_shp <- "Shapes 06Jul2019"
 stp_shp <- "Paradas 06Jul2019"
-DDBB_v <- "[viajes201904]"
+DDBB_v <- "[baseviajesDLN201904]"
 DDBB_e <- "[etapas201904]"
 mnz_censo <- "mnz_cns2017.gpkg"
 Region_nm <- "Región Metropolitana de Santiago"
@@ -42,8 +42,8 @@ od_sersen <- right_join(lazy_dt(od_lst$od4over),
   as_tibble() %>%
   na.omit() %>%
   select(c(5:6, 1:2, 7:10, 3))
-od4cov <- od_lst$od4cov
-rm(od_lst)
+# od4cov <- od_lst$od4cov
+# rm(od_lst)
 #add order 
 od_sersen <- left_join(lazy_dt(od_sersen), 
                         lazy_dt(select(.data = A4, 
