@@ -95,3 +95,22 @@ DDAsersen <- left_join(ser, sen) %>%
            )
          )
 rm(ser, sen)
+#connectivity data
+Primera <- od_lst$od4connec %>%
+  filter(netapa > 1) %>%
+  select(serv = serv_1era, bajada = paraderosubida_2da, periodo, Demanda)
+
+Segunda <- od_lst$od4connec %>%
+  filter(netapa > 2) %>%
+  select(serv = serv_2da, bajada = paraderosubida_3era, periodo, Demanda)
+
+Tercera <- od_lst$od4connec %>%
+  filter(netapa == 4) %>%
+  select(serv = serv_3era, bajada = paraderosubida_4ta, periodo, Demanda)
+
+Connec <- bind_rows(as_tibble(Primera), as_tibble(Segunda), as_tibble(Tercera)) %>%
+  group_by(serv, bajada, periodo) %>%
+  summarise(Demanda = sum(Demanda)) %>%
+  arrange(periodo, serv, bajada)
+
+rm(Primera, Segunda, Tercera, od_lst)
