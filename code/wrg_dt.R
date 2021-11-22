@@ -16,7 +16,10 @@ metro_lst <- metro_dt()
 censo <- mnz_cns2017(mnz_censo)
 suelo <- landuse(Region_nm)
 #rts <- dplyr::filter(.data = rts, UN == 6) #only for testing
-stp <- stops(stp_shp)
+stp <- stops(stp_shp) %>%
+  st_drop_geometry() %>%
+  select(-`Nombre Paradero`) %>%
+  distinct()
 if(!exists("od_lst")) 
   od_lst <- od(DDBB_v = DDBB_v, DDBB_e = DDBB_e) 
 
@@ -29,13 +32,8 @@ library(tidyr)
 library(stringr)
 
 od_sersen <- right_join(lazy_dt(od_lst$od4over), 
-                       lazy_dt(st_drop_geometry(select(.data = stp, par_subida = CODINFRA)
-                                                )
-                                        )
-                       ) %>% 
-  right_join(lazy_dt(st_drop_geometry(select(.data = stp, par_bajada = CODINFRA))
-                              )
-             ) %>% 
+                        select(.data = stp, par_subida = CODINFRA)) %>% 
+  right_join(select(.data = stp, par_bajada = CODINFRA)) %>% 
   left_join(lazy_dt(select(.data = rts, servicio_subida = COD_SINRUT, ROUTE_NAME, COD_USUARI)
                     )
             ) %>%
@@ -97,20 +95,52 @@ DDAsersen <- left_join(ser, sen) %>%
 rm(ser, sen)
 #connectivity data
 Primera <- od_lst$od4connec %>%
-  filter(netapa > 1) %>%
-  select(serv = serv_1era, bajada = paraderosubida_2da, periodo, Demanda)
+  select(serv = serv_1era, bajada = paraderobajada_1era, periodo, Demanda)
 
 Segunda <- od_lst$od4connec %>%
   filter(netapa > 2) %>%
-  select(serv = serv_2da, bajada = paraderosubida_3era, periodo, Demanda)
+  select(serv = serv_2da, bajada = paraderobajada_2da, periodo, Demanda)
 
 Tercera <- od_lst$od4connec %>%
   filter(netapa == 4) %>%
-  select(serv = serv_3era, bajada = paraderosubida_4ta, periodo, Demanda)
+  select(serv = serv_3era, bajada = paraderobajada_3era, periodo, Demanda)
 
 Connec <- bind_rows(as_tibble(Primera), as_tibble(Segunda), as_tibble(Tercera)) %>%
   group_by(serv, bajada, periodo) %>%
   summarise(Demanda = sum(Demanda)) %>%
+  ungroup() %>%
   arrange(periodo, serv, bajada)
 
-rm(Primera, Segunda, Tercera, od_lst)
+# rm(Primera, Segunda, Tercera, od_lst)
+
+trx_baj <- left_join(rename(Connec, bajada_DTPM = bajada), 
+                     select(.data = stp, 
+                            bajada_DTPM = CODINFRA, 
+                            bajada_SIMT = SIMT)
+          ) %>%
+  select(-bajada_DTPM) %>%
+  rename(bajada = bajada_SIMT) %>%
+  left_join(st_drop_geometry(select(.data = rts,
+                                    COD_USUSEN, serv = COD_SINRUT))) %>%
+  select(-serv) %>%
+  relocate(periodo, COD_USUSEN, bajada) %>%
+  na.omit()
+  
+
+stop_frame <- A4 %>%
+  select(ROUTE_NAME, bajada = `Código  paradero Usuario`, Orden)
+
+per_frame <- tibble(ROUTE_NAME = rep(unique(stop_frame$ROUTE_NAME), each = 29), 
+                    PER_DTPM2 = rep(unique(od_sersen$PER_DTPM2), length(unique(stop_frame$ROUTE_NAME)))) %>%
+  arrange(ROUTE_NAME, PER_DTPM2)
+
+dicc_per <- tibble(PER_DTPM2 = unique(per_frame$PER_DTPM2)[1:12], 
+                   periodo = unique(trx_baj$periodo))
+
+per_stop <- left_join(per_frame, stop_frame) %>%
+  left_join(dicc_per) %>%
+  na.omit() %>%
+  # select(-PER_DTPM2) %>%
+  full_join(trx_baj)
+####fix ROUTE_NAMES WITH ("_")
+rm(stop_frame, per_frame)
