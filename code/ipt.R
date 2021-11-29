@@ -173,9 +173,13 @@ od <- function(DDBB_v, DDBB_e){
                               ,[serv_1era]
                               ,[serv_2da]
                               ,[serv_3era]
+                              ,[serv_4ta]
                               ,[paraderobajada_1era]
                               ,[paraderobajada_2da]
                               ,[paraderobajada_3era]
+                              ,[paraderosubida_2da]
+                              ,[paraderosubida_3era]
+                              ,[paraderosubida_4ta]
                           FROM [Asig].[dbo].", DDBB_v,
                           "WHERE netapa > 1 
                           GROUP BY [netapa]
@@ -183,9 +187,13 @@ od <- function(DDBB_v, DDBB_e){
                               ,[serv_1era]
                               ,[serv_2da]
                               ,[serv_3era]
+                              ,[serv_4ta]
                               ,[paraderobajada_1era]
                               ,[paraderobajada_2da]
-                              ,[paraderobajada_3era]")
+                              ,[paraderobajada_3era]
+                              ,[paraderosubida_2da]
+                              ,[paraderosubida_3era]
+                              ,[paraderosubida_4ta]")
   od4connec <- lazy_dt(DBI::dbGetQuery(conn = con, 
                                        statement = sql_od4connec))
   #output_list
